@@ -1,0 +1,9 @@
+LocationID,DCName,City,State,Region,DCType,Latitude,Longitude
+DC01,Gurugram DC,Gurugram,Haryana,North,Metro,28.4595,77.0266
+DC02,Bhiwandi DC,Bhiwandi (Mumbai),Maharashtra,West,Metro,19.2813,73.0483
+DC03,Bengaluru DC,Bengaluru,Karnataka,South,Metro,12.9716,77.5946
+DC04,Chennai DC,Chennai,Tamil Nadu,South,Metro,13.0827,80.2707
+DC05,Hyderabad DC,Hyderabad,Telangana,South,Metro,17.385,78.4867
+DC06,Kolkata DC,Kolkata,West Bengal,East,Regional,22.5726,88.3639
+DC07,Ahmedabad DC,Ahmedabad,Gujarat,West,Regional,23.0225,72.5714
+DC08,Lucknow DC,Lucknow,Uttar Pradesh,North,Regional,26.8467,80.9462

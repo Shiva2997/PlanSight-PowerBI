@@ -1,0 +1,6 @@
+SupplierID,SupplierName,SupplierCountry,StdLeadTimeDays,ShipMode
+SUP01,ODM Partner - China,China,60,Ocean
+SUP02,Contract Manufacturer - India,India,30,Road
+SUP03,Imaging Plant - Malaysia,Malaysia,45,Ocean
+SUP04,Supplies Plant - Singapore,Singapore,32,Ocean
+SUP05,Peripherals Partner - Taiwan,Taiwan,42,Ocean

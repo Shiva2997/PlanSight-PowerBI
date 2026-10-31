@@ -1,0 +1,20 @@
+{
+  "name": "PlanSight",
+  "dataColors": ["#2E6BE6", "#1B2A4A", "#12B76A", "#F79009", "#D92D20", "#7A5AF8", "#0BA5EC", "#98A2B3", "#B2CCFF", "#FEC84B"],
+  "background": "#FFFFFF",
+  "foreground": "#101828",
+  "tableAccent": "#1B2A4A",
+  "good": "#12B76A",
+  "neutral": "#F79009",
+  "bad": "#D92D20",
+  "maximum": "#2E6BE6",
+  "center": "#F2F4F7",
+  "minimum": "#D92D20",
+  "null": "#F9FAFB",
+  "textClasses": {
+    "callout": { "fontSize": 24, "fontFace": "Segoe UI Semibold", "color": "#101828" },
+    "title": { "fontSize": 12, "fontFace": "Segoe UI Semibold", "color": "#101828" },
+    "header": { "fontSize": 11, "fontFace": "Segoe UI Semibold", "color": "#101828" },
+    "label": { "fontSize": 9, "fontFace": "Segoe UI", "color": "#667085" }
+  }
+}

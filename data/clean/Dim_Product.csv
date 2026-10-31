@@ -1,0 +1,38 @@
+SKU,ProductName,Category,Segment,LifecycleStatus,LaunchDate,SupplierID,UnitCostINR,ListPriceINR,CasePack,SupplierName,SupplierCountry,StdLeadTimeDays
+NB-C14-I3,Consumer Notebook 14 (Core i3),Consumer Notebooks,Consumer,EOL,2023-04-01,SUP01,32000,41000,10,ODM Partner - China,China,60
+NB-C14-C5,"Consumer Notebook 14 (Core 5, 2026)",Consumer Notebooks,Consumer,NPI,2026-05-01,SUP01,36000,46000,10,ODM Partner - China,China,60
+NB-C15-I5,Consumer Notebook 15 (Core i5),Consumer Notebooks,Consumer,Mature,2023-04-01,SUP01,42000,54000,10,ODM Partner - China,China,60
+NB-C15-R5,Consumer Notebook 15 (Ryzen 5),Consumer Notebooks,Consumer,Growth,2023-04-01,SUP01,39000,50000,10,ODM Partner - China,China,60
+NB-C14-I7,Consumer Notebook 14 (Core i7),Consumer Notebooks,Consumer,Mature,2023-04-01,SUP01,58000,74000,10,ODM Partner - China,China,60
+NB-CNV-14,2-in-1 Convertible 14,Consumer Notebooks,Consumer,Mature,2023-04-01,SUP01,62000,79000,10,ODM Partner - China,China,60
+NB-GAM-15,Gaming Notebook 15 (RTX 4050),Consumer Notebooks,Consumer,Growth,2025-06-01,SUP01,68000,87000,10,ODM Partner - China,China,60
+NB-B14-I5,Business Notebook 14 (Core i5),Commercial Notebooks,Commercial,Mature,2023-04-01,SUP02,52000,66000,10,Contract Manufacturer - India,India,30
+NB-B14-I7,Business Notebook 14 (Core i7),Commercial Notebooks,Commercial,Mature,2023-04-01,SUP02,68000,86000,10,Contract Manufacturer - India,India,30
+NB-B15-I5,Business Notebook 15 (Core i5),Commercial Notebooks,Commercial,Mature,2023-04-01,SUP02,50000,63000,10,Contract Manufacturer - India,India,30
+NB-PRM-13,Premium Business 13 (Core Ultra 7),Commercial Notebooks,Commercial,NPI,2026-03-01,SUP01,98000,125000,10,ODM Partner - China,China,60
+NB-WKS-16,Mobile Workstation 16,Commercial Notebooks,Commercial,Mature,2023-04-01,SUP01,140000,178000,5,ODM Partner - China,China,60
+DT-B-MINI,Business Mini Desktop (Core i5),Desktops,Commercial,Mature,2023-04-01,SUP02,38000,48000,10,Contract Manufacturer - India,India,30
+DT-B-TWR,Business Tower Desktop (Core i5),Desktops,Commercial,Mature,2023-04-01,SUP02,36000,45000,10,Contract Manufacturer - India,India,30
+DT-AIO-24,All-in-One 24 (Core i5),Desktops,Consumer,Mature,2023-04-01,SUP02,52000,66000,10,Contract Manufacturer - India,India,30
+DT-C-TWR,Consumer Tower Desktop (Core i3),Desktops,Consumer,Mature,2023-04-01,SUP02,30000,38000,10,Contract Manufacturer - India,India,30
+MN-22-FHD,Monitor 22 FHD,Monitors,Consumer,Mature,2023-04-01,SUP05,6500,8500,20,Peripherals Partner - Taiwan,Taiwan,42
+MN-24-FHD,Monitor 24 FHD,Monitors,Commercial,Mature,2023-04-01,SUP05,8200,10800,20,Peripherals Partner - Taiwan,Taiwan,42
+MN-27-QHD,Monitor 27 QHD,Monitors,Consumer,Growth,2023-04-01,SUP05,17500,23000,20,Peripherals Partner - Taiwan,Taiwan,42
+MN-24-USBC,Monitor 24 USB-C,Monitors,Commercial,Growth,2023-04-01,SUP05,15500,20000,20,Peripherals Partner - Taiwan,Taiwan,42
+PR-IT-HOME,Ink Tank Printer (Home),Printers,Consumer,Growth,2023-04-01,SUP03,9800,12900,10,Imaging Plant - Malaysia,Malaysia,45
+PR-IT-WL,Ink Tank Printer (Wireless),Printers,Consumer,Growth,2023-04-01,SUP03,13500,17500,10,Imaging Plant - Malaysia,Malaysia,45
+PR-IJ-AIO,Inkjet All-in-One (Home),Printers,Consumer,Declining,2023-04-01,SUP03,5200,6900,10,Imaging Plant - Malaysia,Malaysia,45
+PR-LJ-MONO,Mono Laser Printer (SMB),Printers,Commercial,Mature,2023-04-01,SUP03,11500,15000,10,Imaging Plant - Malaysia,Malaysia,45
+PR-LJ-MFP,Mono Laser MFP (SMB),Printers,Commercial,Mature,2023-04-01,SUP03,19500,25500,10,Imaging Plant - Malaysia,Malaysia,45
+PR-CLJ-MFP,Color Laser MFP (Office),Printers,Commercial,Mature,2023-04-01,SUP03,52000,68000,5,Imaging Plant - Malaysia,Malaysia,45
+SP-INK-BLK,Ink Bottle - Black,Supplies,Consumer,Growth,2023-04-01,SUP04,420,650,100,Supplies Plant - Singapore,Singapore,32
+SP-INK-CLR,Ink Bottle - Color 3-pack,Supplies,Consumer,Growth,2023-04-01,SUP04,980,1450,100,Supplies Plant - Singapore,Singapore,32
+SP-IJ-BLK,Inkjet Cartridge - Black,Supplies,Consumer,Declining,2023-04-01,SUP04,680,999,100,Supplies Plant - Singapore,Singapore,32
+SP-IJ-TRI,Inkjet Cartridge - Tri-color,Supplies,Consumer,Declining,2023-04-01,SUP04,760,1149,100,Supplies Plant - Singapore,Singapore,32
+SP-TN-STD,Toner Cartridge - Black (Std),Supplies,Commercial,Mature,2023-04-01,SUP04,3600,5200,50,Supplies Plant - Singapore,Singapore,32
+SP-TN-HY,Toner Cartridge - Black (High Yield),Supplies,Commercial,Mature,2023-04-01,SUP04,5400,7700,50,Supplies Plant - Singapore,Singapore,32
+SP-TN-CLR,Color Toner Set,Supplies,Commercial,Mature,2023-04-01,SUP04,21000,29500,10,Supplies Plant - Singapore,Singapore,32
+AC-MSE-WL,Wireless Mouse,Accessories,Consumer,Mature,2023-04-01,SUP05,420,699,100,Peripherals Partner - Taiwan,Taiwan,42
+AC-KBM-CMB,Wireless Keyboard & Mouse Combo,Accessories,Consumer,Mature,2023-04-01,SUP05,1150,1799,50,Peripherals Partner - Taiwan,Taiwan,42
+AC-BAG-156,Laptop Backpack 15.6,Accessories,Consumer,Mature,2023-04-01,SUP05,650,1199,50,Peripherals Partner - Taiwan,Taiwan,42
+AC-DOCK-C,USB-C Dock,Accessories,Commercial,Growth,2023-04-01,SUP05,7800,10900,20,Peripherals Partner - Taiwan,Taiwan,42

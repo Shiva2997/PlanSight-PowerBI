@@ -1,0 +1,410 @@
+// =====================================================================================
+//  PlanSight - DAX
+//  1. Calculated tables (Modeling > New table)  : Date, Dim_Status
+//  2. Measures         (Modeling > New measure) : create them in a table called _Measures
+//     (Home > Enter data > name it "_Measures" > Load, then delete its dummy column)
+//  Folder names below are suggestions for the "Display folder" property.
+// =====================================================================================
+
+
+// -------------------------------------------------------------------------------------
+// 1. CALCULATED TABLES
+// -------------------------------------------------------------------------------------
+
+// Date table - fiscal year runs Nov-Oct (FY26 = Nov 2025 - Oct 2026).
+// After creating it: Table tools > Mark as date table > Date.
+// Sort YearMonth by YearMonthSort, and MonthName by FiscalMonthNum.
+Date =
+ADDCOLUMNS (
+    CALENDAR ( DATE ( 2024, 11, 1 ), DATE ( 2027, 1, 31 ) ),
+    "MonthStart", DATE ( YEAR ( [Date] ), MONTH ( [Date] ), 1 ),
+    "YearMonth", FORMAT ( [Date], "MMM-YY" ),
+    "YearMonthSort", YEAR ( [Date] ) * 100 + MONTH ( [Date] ),
+    "MonthName", FORMAT ( [Date], "MMM" ),
+    "FiscalYear", "FY" & FORMAT ( MOD ( YEAR ( [Date] ) + IF ( MONTH ( [Date] ) >= 11, 1, 0 ), 100 ), "00" ),
+    "FiscalQuarter", "Q" & ( INT ( MOD ( MONTH ( [Date] ) + 1, 12 ) / 3 ) + 1 ),
+    "FiscalMonthNum", MOD ( MONTH ( [Date] ) + 1, 12 ) + 1,
+    "Season", SWITCH (
+        TRUE (),
+        MONTH ( [Date] ) IN { 9, 10, 11 }, "Festive",
+        MONTH ( [Date] ) IN { 6, 7 }, "Back to school",
+        MONTH ( [Date] ) = 3, "Indian FY-end",
+        "Regular"
+    ),
+    "IsFuture", [Date] > DATE ( 2026, 10, 31 )
+)
+
+// Disconnected table that drives the inventory-status donut / legend.
+// Sort Status by SortOrder.
+Dim_Status =
+DATATABLE (
+    "Status", STRING,
+    "SortOrder", INTEGER,
+    {
+        { "Stocked out", 1 },
+        { "Stockout risk", 2 },
+        { "Healthy", 3 },
+        { "Watch", 4 },
+        { "Excess", 5 }
+    }
+)
+
+
+// -------------------------------------------------------------------------------------
+// 2. MEASURES
+// -------------------------------------------------------------------------------------
+
+// ===== Folder: 0 Helpers =============================================================
+
+// Last month with inventory data (Oct 31, 2026), whatever is filtered
+As Of Date =
+CALCULATE ( MAX ( Fact_Inventory[SnapshotDate] ), REMOVEFILTERS () )
+
+// Month-end used for stock measures: end of the selected period, capped at the as-of date
+Snapshot Date =
+MIN ( MAX ( 'Date'[Date] ), [As Of Date] )
+
+
+// ===== Folder: 1 Demand & Forecast ===================================================
+
+Actual Units =
+SUM ( Fact_DemandForecast[ActualUnits] )
+
+Demand Value (₹ Cr) =
+DIVIDE (
+    SUMX ( Fact_DemandForecast, Fact_DemandForecast[ActualUnits] * RELATED ( Dim_Product[ListPriceINR] ) ),
+    10000000
+)
+
+Actual Units LY =
+CALCULATE ( [Actual Units], SAMEPERIODLASTYEAR ( 'Date'[Date] ) )
+
+Demand Growth YoY % =
+DIVIDE ( [Actual Units] - [Actual Units LY], [Actual Units LY] )
+
+Consensus Forecast Units =
+SUM ( Fact_DemandForecast[ConsensusForecastUnits] )
+
+Stat Forecast Units =
+SUM ( Fact_DemandForecast[StatForecastUnits] )
+
+// Forecast only for months that already have actuals (fair comparison)
+Consensus Fcst (Actualized) =
+CALCULATE ( [Consensus Forecast Units], Fact_DemandForecast[HasActual] = TRUE () )
+
+Stat Fcst (Actualized) =
+CALCULATE ( [Stat Forecast Units], Fact_DemandForecast[HasActual] = TRUE () )
+
+// Absolute error is calculated row by row (Month x SKU x DC), THEN summed.
+// This is what makes WAPE honest: over- and under-forecasts cannot cancel out.
+Abs Error Consensus =
+CALCULATE (
+    SUMX (
+        Fact_DemandForecast,
+        ABS ( Fact_DemandForecast[ConsensusForecastUnits] - Fact_DemandForecast[ActualUnits] )
+    ),
+    Fact_DemandForecast[HasActual] = TRUE ()
+)
+
+Abs Error Stat =
+CALCULATE (
+    SUMX (
+        Fact_DemandForecast,
+        ABS ( Fact_DemandForecast[StatForecastUnits] - Fact_DemandForecast[ActualUnits] )
+    ),
+    Fact_DemandForecast[HasActual] = TRUE ()
+)
+
+WAPE % =
+DIVIDE ( [Abs Error Consensus], [Actual Units] )
+
+Forecast Accuracy % =
+VAR _wape = [WAPE %]
+RETURN
+    IF ( ISBLANK ( _wape ), BLANK (), MAX ( 0, 1 - _wape ) )
+
+Stat Forecast Accuracy % =
+VAR _wape = DIVIDE ( [Abs Error Stat], [Actual Units] )
+RETURN
+    IF ( ISBLANK ( _wape ), BLANK (), MAX ( 0, 1 - _wape ) )
+
+// Forecast Value Add: did the planners' consensus beat the statistical model?
+// Positive = consensus more accurate. Result is in accuracy points (e.g. -1.5).
+// Custom format string:  +0.0" pts";-0.0" pts";0.0" pts"
+Forecast Value Add (pts) =
+( [Forecast Accuracy %] - [Stat Forecast Accuracy %] ) * 100
+
+// Positive = over-forecast, negative = under-forecast
+Forecast Bias % =
+DIVIDE ( [Consensus Fcst (Actualized)] - [Actual Units], [Actual Units] )
+
+Stat Bias % =
+DIVIDE ( [Stat Fcst (Actualized)] - [Actual Units], [Actual Units] )
+
+Forecast Accuracy % (Rolling 3M) =
+VAR _end = MAX ( 'Date'[Date] )
+VAR _err =
+    CALCULATE ( [Abs Error Consensus], DATESINPERIOD ( 'Date'[Date], _end, -3, MONTH ) )
+VAR _act =
+    CALCULATE ( [Actual Units], DATESINPERIOD ( 'Date'[Date], _end, -3, MONTH ) )
+RETURN
+    IF ( _act > 0, MAX ( 0, 1 - DIVIDE ( _err, _act ) ) )
+
+
+// ===== Folder: 2 Service =============================================================
+
+Shipped Units =
+SUM ( Fact_Inventory[ShippedUnits] )
+
+Unfilled Units =
+SUM ( Fact_Inventory[UnfilledUnits] )
+
+Fill Rate % =
+DIVIDE ( [Shipped Units], [Shipped Units] + [Unfilled Units] )
+
+// SKU x DC x month combinations where some demand could not be shipped
+Stockout Events =
+CALCULATE ( COUNTROWS ( Fact_Inventory ), Fact_Inventory[UnfilledUnits] > 0 )
+
+Lost Sales Value (₹ Cr) =
+DIVIDE (
+    SUMX ( Fact_Inventory, Fact_Inventory[UnfilledUnits] * RELATED ( Dim_Product[ListPriceINR] ) ),
+    10000000
+)
+
+
+// ===== Folder: 3 Inventory ===========================================================
+
+// Stock is a snapshot: never add months together, take the last month-end in the selection
+Closing Units =
+VAR _snap = [Snapshot Date]
+RETURN
+    CALCULATE ( SUM ( Fact_Inventory[ClosingUnits] ), Fact_Inventory[SnapshotDate] = _snap )
+
+Safety Stock Units =
+VAR _snap = [Snapshot Date]
+RETURN
+    CALCULATE ( SUM ( Fact_Inventory[SafetyStockUnits] ), Fact_Inventory[SnapshotDate] = _snap )
+
+Inventory Value (₹ Cr) =
+VAR _snap = [Snapshot Date]
+RETURN
+    DIVIDE (
+        CALCULATE (
+            SUMX ( Fact_Inventory, Fact_Inventory[ClosingUnits] * RELATED ( Dim_Product[UnitCostINR] ) ),
+            Fact_Inventory[SnapshotDate] = _snap
+        ),
+        10000000
+    )
+
+// Consensus forecast for the 3 months after the snapshot month-end
+Fwd 3M Forecast Units =
+VAR _snap = [Snapshot Date]
+RETURN
+    CALCULATE (
+        [Consensus Forecast Units],
+        REMOVEFILTERS ( 'Date' ),
+        'Date'[Date] > _snap,
+        'Date'[Date] <= EOMONTH ( _snap, 3 )
+    )
+
+// Weeks of supply = stock on hand / average weekly forward demand (3 months = 13 weeks)
+Weeks of Supply =
+DIVIDE ( [Closing Units], DIVIDE ( [Fwd 3M Forecast Units], 13 ) )
+
+// Use at SKU x DC level (table/matrix rows)
+Inventory Status =
+VAR _oh = [Closing Units]
+VAR _fc = [Fwd 3M Forecast Units]
+VAR _wos = [Weeks of Supply]
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( _oh ) && ISBLANK ( _fc ), BLANK (),
+        _oh <= 0 && _fc > 0, "Stocked out",
+        _oh <= 0, BLANK (),
+        _fc <= 0, "Excess",
+        _wos < 1.5, "Stockout risk",
+        _wos <= 8, "Healthy",
+        _wos <= 12, "Watch",
+        "Excess"
+    )
+
+// For conditional formatting: Format > Cell elements > Background color > fx > Field value
+Status Color =
+SWITCH (
+    [Inventory Status],
+    "Stocked out", "#B42318",
+    "Stockout risk", "#F79009",
+    "Healthy", "#12B76A",
+    "Watch", "#FEC84B",
+    "Excess", "#2E90FA"
+)
+
+// Number of SKU x DC combinations in each status (put Dim_Status[Status] on the legend/axis)
+SKU-DC Count =
+VAR _status = SELECTEDVALUE ( Dim_Status[Status] )
+VAR _combos = CROSSJOIN ( VALUES ( Dim_Product[SKU] ), VALUES ( Dim_Location[LocationID] ) )
+RETURN
+    IF (
+        ISBLANK ( _status ),
+        COUNTROWS ( FILTER ( _combos, NOT ISBLANK ( [Inventory Status] ) ) ),
+        COUNTROWS ( FILTER ( _combos, [Inventory Status] = _status ) )
+    )
+
+// Value of stock above 12 weeks of forward demand, summed SKU x DC by SKU x DC
+Excess Value (₹ Cr) =
+VAR _excessINR =
+    SUMX (
+        CROSSJOIN ( VALUES ( Dim_Product[SKU] ), VALUES ( Dim_Location[LocationID] ) ),
+        VAR _oh = [Closing Units]
+        VAR _weekly = DIVIDE ( [Fwd 3M Forecast Units], 13 )
+        VAR _cost = CALCULATE ( SELECTEDVALUE ( Dim_Product[UnitCostINR] ) )
+        RETURN
+            MAX ( 0, _oh - 12 * _weekly ) * _cost
+    )
+RETURN
+    DIVIDE ( _excessINR, 10000000 )
+
+// Lot-level stock value (use with Fact_InventoryLots[AgeBucket] for the ageing chart)
+Lot Value (₹ Cr) =
+VAR _snap = [Snapshot Date]
+RETURN
+    DIVIDE (
+        CALCULATE (
+            SUMX ( Fact_InventoryLots, Fact_InventoryLots[UnitsOnHand] * RELATED ( Dim_Product[UnitCostINR] ) ),
+            Fact_InventoryLots[SnapshotDate] = _snap
+        ),
+        10000000
+    )
+
+Aged >90d Value (₹ Cr) =
+CALCULATE ( [Lot Value (₹ Cr)], Fact_InventoryLots[AgeDays] > 90 )
+
+Aged >90d % =
+DIVIDE ( [Aged >90d Value (₹ Cr)], [Lot Value (₹ Cr)] )
+
+// Per SKU: is there excess in one DC while another DC is short? -> transfer stock
+Rebalance Opportunity =
+VAR _excess =
+    COUNTROWS ( FILTER ( VALUES ( Dim_Location[LocationID] ), [Inventory Status] = "Excess" ) )
+VAR _short =
+    COUNTROWS (
+        FILTER ( VALUES ( Dim_Location[LocationID] ), [Inventory Status] IN { "Stocked out", "Stockout risk" } )
+    )
+RETURN
+    IF ( _excess > 0 && _short > 0, _excess & " DC(s) excess -> " & _short & " DC(s) short" )
+
+
+// ===== Folder: 4 Supply ==============================================================
+
+PO Lines Received =
+CALCULATE ( COUNTROWS ( Fact_PurchaseOrders ), Fact_PurchaseOrders[Status] = "Received" )
+
+// On time = received no later than 3 days after the requested date
+On-Time Delivery % =
+DIVIDE (
+    CALCULATE ( COUNTROWS ( Fact_PurchaseOrders ), Fact_PurchaseOrders[OnTimeFlag] = 1 ),
+    [PO Lines Received]
+)
+
+OTIF % =
+DIVIDE (
+    CALCULATE (
+        COUNTROWS ( Fact_PurchaseOrders ),
+        Fact_PurchaseOrders[OnTimeFlag] = 1,
+        Fact_PurchaseOrders[InFullFlag] = 1
+    ),
+    [PO Lines Received]
+)
+
+Avg Delay Days (Late Lines) =
+CALCULATE ( AVERAGE ( Fact_PurchaseOrders[DelayDays] ), Fact_PurchaseOrders[OnTimeFlag] = 0 )
+
+Past-Due Open PO Lines =
+VAR _asof = [As Of Date]
+RETURN
+    CALCULATE (
+        COUNTROWS ( Fact_PurchaseOrders ),
+        REMOVEFILTERS ( 'Date' ),
+        Fact_PurchaseOrders[Status] = "Open",
+        Fact_PurchaseOrders[RequestedDate] <= _asof
+    )
+
+Open + Planned Supply Units =
+CALCULATE ( SUM ( Fact_PurchaseOrders[OpenQty] ), REMOVEFILTERS ( 'Date' ) )
+
+
+// ===== Folder: 5 Shortage Risk (forward-looking) =====================================
+
+// Projected stock at the end of each future month:
+//   stock on the as-of date + open/planned PO receipts due by then - consensus forecast by then
+// Put 'Date'[YearMonth] on columns, add a visual filter 'Date'[IsFuture] = True, and use
+// Edit interactions so the Fiscal Year slicer does NOT filter this visual.
+Projected Closing Units =
+VAR _asof = [As Of Date]
+VAR _monthEnd = EOMONTH ( MAX ( 'Date'[Date] ), 0 )
+VAR _onHand =
+    CALCULATE (
+        SUM ( Fact_Inventory[ClosingUnits] ),
+        REMOVEFILTERS ( 'Date' ),
+        Fact_Inventory[SnapshotDate] = _asof
+    )
+VAR _supply =
+    CALCULATE (
+        SUM ( Fact_PurchaseOrders[OpenQty] ),
+        REMOVEFILTERS ( 'Date' ),
+        Fact_PurchaseOrders[ExpectedReceiptDate] > _asof,
+        Fact_PurchaseOrders[ExpectedReceiptDate] <= _monthEnd
+    )
+VAR _demand =
+    CALCULATE (
+        [Consensus Forecast Units],
+        REMOVEFILTERS ( 'Date' ),
+        'Date'[Date] > _asof,
+        'Date'[Date] <= _monthEnd
+    )
+RETURN
+    IF (
+        _monthEnd > _asof && NOT ( ISBLANK ( _onHand ) && ISBLANK ( _demand ) ),
+        _onHand + _supply - _demand
+    )
+
+// Worst projected gap per SKU x DC over the next 3 months, summed (so one DC's surplus
+// cannot hide another DC's gap). Works on any page: it ignores date slicers on purpose.
+Projected Shortage Units =
+VAR _asof = [As Of Date]
+VAR _future =
+    CALCULATETABLE ( VALUES ( 'Date'[MonthStart] ), REMOVEFILTERS ( 'Date' ), 'Date'[MonthStart] > _asof )
+RETURN
+    SUMX (
+        CROSSJOIN ( VALUES ( Dim_Product[SKU] ), VALUES ( Dim_Location[LocationID] ) ),
+        VAR _worst =
+            MINX (
+                _future,
+                VAR _m = 'Date'[MonthStart]
+                RETURN
+                    CALCULATE ( [Projected Closing Units], REMOVEFILTERS ( 'Date' ), 'Date'[MonthStart] = _m )
+            )
+        RETURN
+            MAX ( 0, - _worst )
+    )
+
+// SKU x DC combinations whose projected stock goes below zero in any of the next 3 months.
+// Also ignores date slicers on purpose, so the card works next to a Fiscal Year slicer.
+Shortage Risk SKU-DCs =
+VAR _asof = [As Of Date]
+VAR _future =
+    CALCULATETABLE ( VALUES ( 'Date'[MonthStart] ), REMOVEFILTERS ( 'Date' ), 'Date'[MonthStart] > _asof )
+RETURN
+    COUNTROWS (
+        FILTER (
+            CROSSJOIN ( VALUES ( Dim_Product[SKU] ), VALUES ( Dim_Location[LocationID] ) ),
+            MINX (
+                _future,
+                VAR _m = 'Date'[MonthStart]
+                RETURN
+                    CALCULATE ( [Projected Closing Units], REMOVEFILTERS ( 'Date' ), 'Date'[MonthStart] = _m )
+            ) < 0
+        )
+    )
